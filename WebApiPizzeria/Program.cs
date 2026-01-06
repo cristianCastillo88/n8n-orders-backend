@@ -13,14 +13,11 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<PostgresContext>(options =>
     options.UseNpgsql(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Configurar AutoMapper
-builder.Services.AddAutoMapper(typeof(Program));
-
 // Registrar Repositorios
-builder.Services.AddScoped<IOrderRepository, OrderRepository>();
+builder.Services.AddScoped<IProductRepository, ProductRepository>();
 
 // Registrar Servicios
-builder.Services.AddScoped<IOrderService, OrderService>();
+builder.Services.AddScoped<IProductService, ProductService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
