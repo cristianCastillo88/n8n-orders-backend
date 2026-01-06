@@ -13,11 +13,21 @@ public class ProductService : IProductService
         _productRepository = productRepository;
     }
 
-    public async Task<IEnumerable<ProductAvalaibilityDto>> GetAvalaibleProducts()
+    public async Task<BaseResponseDto<IEnumerable<ProductAvalaibilityDto>>> GetAvalaibleProducts()
     {
-        var currentDay = DateTime.Now.DayOfWeek;
-        var products = await _productRepository.GetAvalaibleProducts(currentDay);
-        return products;
+        try
+        {
+            var currentDay = DateTime.Now.DayOfWeek;
+            var products = await _productRepository.GetAvalaibleProducts(currentDay);
+            
+            var response = new BaseResponseDto<IEnumerable<ProductAvalaibilityDto>>(true, products);
+            return response;
+        }
+        catch (Exception)
+        {
+            var response = new BaseResponseDto<IEnumerable<ProductAvalaibilityDto>>(false, Enumerable.Empty<ProductAvalaibilityDto>());
+            return response;
+        }
     }
 }
 
