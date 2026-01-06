@@ -1,0 +1,75 @@
+### Endpoint: Agregar Item a Pedido
+POST https://localhost:{{port}}/api/orders/add-item
+Content-Type: application/json
+
+{
+  "orderId": 1,
+  "productId": "3fa85f64-5717-4562-b3fc-2c963f66afa6",
+  "quantity": 2,
+  "userId": "user123"
+}
+
+###
+
+### Endpoint: Eliminar Item de Pedido
+DELETE https://localhost:{{port}}/api/orders/1/items/3fa85f64-5717-4562-b3fc-2c963f66afa6
+
+###
+
+### Endpoint: Cancelar Pedido
+PUT https://localhost:{{port}}/api/orders/1/cancel
+
+###
+
+### Ejemplo de Respuesta Exitosa - Add Item
+# HTTP/1.1 200 OK
+# {
+#   "success": true,
+#   "message": "Item agregado exitosamente",
+#   "newTotal": 25.50,
+#   "currency": "USD"
+# }
+
+###
+
+### Ejemplo de Respuesta Exitosa - Remove Item
+# HTTP/1.1 200 OK
+# {
+#   "success": true,
+#   "message": "Item eliminado exitosamente",
+#   "newTotal": 15.50,
+#   "currency": "USD"
+# }
+
+###
+
+### Ejemplo de Respuesta Exitosa - Cancel Order
+# HTTP/1.1 200 OK
+# {
+#   "success": true,
+#   "message": "Orden cancelada exitosamente",
+#   "newTotal": 25.50,
+#   "currency": "USD"
+# }
+
+###
+
+### Ejemplo de Respuesta con Error (Producto no encontrado)
+# HTTP/1.1 400 Bad Request
+# {
+#   "success": false,
+#   "message": "Producto no encontrado",
+#   "newTotal": null,
+#   "currency": "USD"
+# }
+
+###
+
+### Ejemplo de Respuesta con Error (Orden ya cancelada)
+# HTTP/1.1 400 Bad Request
+# {
+#   "success": false,
+#   "message": "No se puede cancelar la orden. La orden ya está cancelada",
+#   "newTotal": 25.50,
+#   "currency": "USD"
+# }

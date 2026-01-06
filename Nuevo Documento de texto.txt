@@ -1,0 +1,17 @@
+df6e7171-486f-4c4a-b63d-fec09140765a	Coca-Cola 1.5L	5	1800.00
+c77feee7-5c6c-4576-a0ed-345e08f7283b	Agua Mineral 500ml	5	900.00
+ae9279a4-cd96-41dc-8931-573168e088d5	Promo: Pizza Común + Pizza Especial	6	9500.00
+be50ee52-66b6-4b6d-a172-b14e6234111b	Pizza Muzzarella	1	4500.00
+16508a18-e745-47c0-b9db-e76fece946bd	Pizza Jamón	2	5200.00
+3ca63162-a83f-44c3-8939-80a291308e91	Pizza Tomate	2	5000.00
+b4492955-c81d-451d-b3a9-280e3f6c7dd5	Pizza Huevo	2	5100.00
+f99b3379-b41e-47ce-9d61-749453d3e6b5	Pizza Jamón y Morrones	2	5400.00
+747dd21b-ab3d-4102-a6af-58bcdb37d206	Pizza Jamón y Huevo	3	5900.00
+121eefd6-3ed5-45be-8269-7d51590b8870	Pizza Jamón y Tomate	3	5800.00
+b3d8da04-9f2c-4a4f-972c-f5bd55954c6e	Pizza Huevo y Tomate	3	5600.00
+d68ed186-c61b-4373-aab0-b54d10972363	Pizza Jamón, Huevo y Morrones	3	6200.00
+b262e50b-519f-4b35-995c-d19330e7d2c8	Empanada de Carne	4	900.00
+df832caa-f1be-4548-bf19-5f96f0f8178c	Empanada de Pollo	4	900.00
+23206002-b708-4905-9250-cf843af87b3b	Empanada de Jamón y Queso	4	900.00
+df8d378d-b611-44f6-a68e-a13f66d2d0bc	Empanada de Verdura	4	850.00
+22785bb0-8444-43ff-b8b5-ad70767c2c94	Empanada de Humita	4	850.00
