@@ -66,6 +66,19 @@ public class OrderItemService : IOrderItemService
 
         try
         {
+            if (dto.OrderId == 0)
+            {
+                var activeOrder = await _orderRepository.GetLastOrderByUserId(dto.UserId.ToString());
+
+                if (activeOrder != null)
+                {
+                    dto.OrderId = activeOrder.Id;
+                }
+                else
+                {
+                    return new BaseResponseDto<OrderItemDto>(true, new OrderItemDto());
+                }
+            }
             await _orderItemRepository.DeleteOrderItems(dto.OrderId, dto.ProductIds);
             var orderItemDto = await _orderItemRepository.GetByOrderId(dto.OrderId);
 
