@@ -90,5 +90,43 @@ public class OrderItemService : IOrderItemService
             return new BaseResponseDto<OrderItemDto>(false, new OrderItemDto());
         }
     }
+
+    public async Task<BaseResponseDto<OrderItemDto>> UpdateOrderItem(UpdateOrderItemRequestDto dto, CancellationToken cancellationToken)
+    {
+        await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            var itemExists = await _orderItemRepository.UpdateOrderItem(dto.OrderId, dto.ProductId, dto.Quantity);
+
+            if (!itemExists)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return new BaseResponseDto<OrderItemDto>(false, new OrderItemDto());
+            }
+
+            var orderItemDto = await _orderItemRepository.GetByOrderId(dto.OrderId);
+
+            decimal total = 0;
+            foreach (var item in orderItemDto.Items)
+            {
+                total += item.Price * item.Quantity;
+            }
+
+            await _orderRepository.UpdateTotal(dto.OrderId, total);
+
+            var responseOrderItemDto = await _orderItemRepository.GetByOrderId(dto.OrderId);
+            responseOrderItemDto.Total = total;
+
+            await transaction.CommitAsync(cancellationToken);
+
+            return new BaseResponseDto<OrderItemDto>(true, responseOrderItemDto);
+        }
+        catch (Exception)
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            return new BaseResponseDto<OrderItemDto>(false, new OrderItemDto());
+        }
+    }
 }
 

@@ -28,5 +28,12 @@ public class OrderItemController : ControllerBase
         var response = await _orderItemService.DeleteOrderItems(dto, cancellationToken);
         return Ok(response);
     }
+
+    [HttpPut("items")]
+    public async Task<IActionResult> UpdateOrderItem([FromBody] UpdateOrderItemRequestDto dto, CancellationToken cancellationToken)
+    {
+        var response = await _orderItemService.UpdateOrderItem(dto, cancellationToken);
+        return Ok(response);
+    }
 }
 

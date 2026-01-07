@@ -59,5 +59,20 @@ public class OrderItemRepository : IOrderItemRepository
             await _context.SaveChangesAsync();
         }
     }
+
+    public async Task<bool> UpdateOrderItem(int orderId, int productId, decimal quantity)
+    {
+        var orderItem = await _context.OrderItems
+            .FirstOrDefaultAsync(oi => oi.OrderId == orderId && oi.ProductId == productId);
+
+        if (orderItem == null)
+        {
+            return false;
+        }
+
+        orderItem.Quantity = quantity;
+        await _context.SaveChangesAsync();
+        return true;
+    }
 }
 
