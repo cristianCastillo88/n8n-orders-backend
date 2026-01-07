@@ -47,5 +47,17 @@ public class OrderItemRepository : IOrderItemRepository
             Total = 0
         };
     }
+    public async Task DeleteOrderItems(int orderId, List<int> productIds)
+    {
+        var orderItemsToDelete = await _context.OrderItems
+            .Where(oi => oi.OrderId == orderId && productIds.Contains(oi.ProductId))
+            .ToListAsync();
+
+        if (orderItemsToDelete.Any())
+        {
+            _context.OrderItems.RemoveRange(orderItemsToDelete);
+            await _context.SaveChangesAsync();
+        }
+    }
 }
 

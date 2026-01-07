@@ -6,5 +6,6 @@ public interface IOrderItemRepository
 {
     Task SaveRange(OrderItemPostDto dto);
     Task<OrderItemDto> GetByOrderId(int orderId);
+    Task DeleteOrderItems(int orderId, List<int> productIds);
 }
 
