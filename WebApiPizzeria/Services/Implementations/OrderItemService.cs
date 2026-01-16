@@ -12,7 +12,10 @@ public class OrderItemService : IOrderItemService
     private readonly IOrderItemRepository _orderItemRepository;
     private readonly PostgresContext _context;
 
-    public OrderItemService(IOrderRepository orderRepository, IOrderItemRepository orderItemRepository, PostgresContext context)
+    public OrderItemService(
+        IOrderRepository orderRepository, 
+        IOrderItemRepository orderItemRepository, 
+        PostgresContext context)
     {
         _orderRepository = orderRepository;
         _orderItemRepository = orderItemRepository;
@@ -34,6 +37,7 @@ public class OrderItemService : IOrderItemService
             }
 
             dto.OrderId = order.Id;
+            
             await _orderItemRepository.SaveRange(dto);
 
             var orderItemDto = await _orderItemRepository.GetByOrderId(order.Id);

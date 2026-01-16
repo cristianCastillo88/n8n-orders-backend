@@ -32,6 +32,10 @@ public partial class PostgresContext : DbContext
     public virtual DbSet<ProductAvailabilityDay> ProductAvailabilityDays { get; set; }
 
     public virtual DbSet<ProductType> ProductTypes { get; set; }
+    public virtual DbSet<ExtraType> ExtraTypes { get; set; }
+    public virtual DbSet<OrderItemExtras> OrderItemExtras { get; set; }
+    public virtual DbSet<ProductConfiguration> ProductConfigurations { get; set; }
+
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -218,6 +222,34 @@ public partial class PostgresContext : DbContext
                 .ValueGeneratedNever()
                 .HasColumnName("id");
             entity.Property(e => e.Name).HasColumnName("name");
+        });
+
+        modelBuilder.Entity<ProductConfiguration>(entity =>
+        {
+            entity.HasKey(e => e.Id).HasName("product_configurations_pkey");
+
+            entity.ToTable("product_configurations");
+
+            entity.Property(e => e.Id)
+                .UseIdentityAlwaysColumn()
+                .HasColumnName("id");
+            entity.Property(e => e.ProductId).HasColumnName("product_id");
+            entity.Property(e => e.ChildProductId).HasColumnName("child_product_id");
+            entity.Property(e => e.Quantity).HasColumnName("quantity");
+
+            // Relación con el producto Padre (Promoción)
+            entity.HasOne(d => d.Product)
+                .WithMany()
+                .HasForeignKey(d => d.ProductId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("fk_product_configurations_product");
+
+            // Relación con el producto Hijo (Componente de la promoción)
+            entity.HasOne(d => d.ChildProduct)
+                .WithMany()
+                .HasForeignKey(d => d.ChildProductId)
+                .OnDelete(DeleteBehavior.Restrict)
+                .HasConstraintName("fk_product_configurations_child_product");
         });
 
         OnModelCreatingPartial(modelBuilder);

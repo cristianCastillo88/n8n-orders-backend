@@ -16,15 +16,53 @@ public class OrderItemRepository : IOrderItemRepository
 
     public async Task SaveRange(OrderItemPostDto dto)
     {
-        var orderItems = dto.Products.Select(product => new OrderItem
+        var orderItems = new List<OrderItem>();
+        foreach (var product in dto.Products)
         {
-            OrderId = dto.OrderId,
-            ProductId = product.Id,
-            Quantity = product.Quantity
-        }).ToList();
+            if (product.SubProducts != null && product.SubProducts.Any())
+            {
+                var parentOrderItem = new OrderItem
+                {
+                    OrderId = dto.OrderId,
+                    ProductId = product.Id,
+                    Quantity = product.Quantity,
+                    ParentOrderItemId = null
+                };
 
-        await _context.OrderItems.AddRangeAsync(orderItems);
-        await _context.SaveChangesAsync();
+                await _context.OrderItems.AddAsync(parentOrderItem);
+                await _context.SaveChangesAsync();
+
+                foreach (var subProduct in product.SubProducts)
+                {
+                    var childOrderItem = new OrderItem
+                    {
+                        OrderId = dto.OrderId,
+                        ProductId = subProduct.Id,
+                        Quantity = subProduct.Quantity,
+                        ParentOrderItemId = parentOrderItem.Id
+                    };
+
+                    orderItems.Add(childOrderItem);
+                }
+            }
+            else
+            {
+                var orderItem = new OrderItem
+                {
+                    OrderId = dto.OrderId,
+                    ProductId = product.Id,
+                    Quantity = product.Quantity,
+                    ParentOrderItemId = null
+                };
+
+                orderItems.Add(orderItem);
+            }
+            if (orderItems.Any())
+            {
+                await _context.OrderItems.AddRangeAsync(orderItems);
+                await _context.SaveChangesAsync();
+            }
+        }
     }
 
     public async Task<OrderItemDto> GetByOrderId(int orderId)

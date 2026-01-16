@@ -20,23 +20,6 @@ namespace WebApiPizzeria.Migrations
                 .HasAnnotation("ProductVersion", "9.0.1")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "auth", "aal_level", new[] { "aal1", "aal2", "aal3" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "auth", "code_challenge_method", new[] { "s256", "plain" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "auth", "factor_status", new[] { "unverified", "verified" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "auth", "factor_type", new[] { "totp", "webauthn", "phone" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "auth", "oauth_authorization_status", new[] { "pending", "approved", "denied", "expired" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "auth", "oauth_client_type", new[] { "public", "confidential" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "auth", "oauth_registration_type", new[] { "dynamic", "manual" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "auth", "oauth_response_type", new[] { "code" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "auth", "one_time_token_type", new[] { "confirmation_token", "reauthentication_token", "recovery_token", "email_change_token_new", "email_change_token_current", "phone_change_token" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "realtime", "action", new[] { "INSERT", "UPDATE", "DELETE", "TRUNCATE", "ERROR" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "realtime", "equality_op", new[] { "eq", "neq", "lt", "lte", "gt", "gte", "in" });
-            NpgsqlModelBuilderExtensions.HasPostgresEnum(modelBuilder, "storage", "buckettype", new[] { "STANDARD", "ANALYTICS", "VECTOR" });
-            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "extensions", "pg_stat_statements");
-            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "extensions", "pgcrypto");
-            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "extensions", "uuid-ossp");
-            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "graphql", "pg_graphql");
-            NpgsqlModelBuilderExtensions.HasPostgresExtension(modelBuilder, "vault", "supabase_vault");
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
             modelBuilder.Entity("WebApiPizzeria.Models.ConversationSession", b =>
@@ -95,6 +78,26 @@ namespace WebApiPizzeria.Migrations
                         .HasName("day_types_pkey");
 
                     b.ToTable("day_types", (string)null);
+                });
+
+            modelBuilder.Entity("WebApiPizzeria.Models.ExtraType", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ExtraTypes");
                 });
 
             modelBuilder.Entity("WebApiPizzeria.Models.N8nChatHistory", b =>
@@ -183,6 +186,9 @@ namespace WebApiPizzeria.Migrations
                         .HasColumnType("integer")
                         .HasColumnName("order_id");
 
+                    b.Property<int?>("ParentOrderItemId")
+                        .HasColumnType("integer");
+
                     b.Property<int>("ProductId")
                         .HasColumnType("integer")
                         .HasColumnName("product_id");
@@ -196,9 +202,40 @@ namespace WebApiPizzeria.Migrations
 
                     b.HasIndex("OrderId");
 
+                    b.HasIndex("ParentOrderItemId");
+
                     b.HasIndex("ProductId");
 
                     b.ToTable("order_items", (string)null);
+                });
+
+            modelBuilder.Entity("WebApiPizzeria.Models.OrderItemExtras", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ExtraTypeId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("OrderItemId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Price")
+                        .HasColumnType("numeric");
+
+                    b.Property<decimal>("Quantity")
+                        .HasColumnType("numeric");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExtraTypeId");
+
+                    b.HasIndex("OrderItemId");
+
+                    b.ToTable("OrderItemExtras");
                 });
 
             modelBuilder.Entity("WebApiPizzeria.Models.OrderStateType", b =>
@@ -276,6 +313,37 @@ namespace WebApiPizzeria.Migrations
                     b.ToTable("product_availability_days", (string)null);
                 });
 
+            modelBuilder.Entity("WebApiPizzeria.Models.ProductConfiguration", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityAlwaysColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ChildProductId")
+                        .HasColumnType("integer")
+                        .HasColumnName("child_product_id");
+
+                    b.Property<int>("ProductId")
+                        .HasColumnType("integer")
+                        .HasColumnName("product_id");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer")
+                        .HasColumnName("quantity");
+
+                    b.HasKey("Id")
+                        .HasName("product_configurations_pkey");
+
+                    b.HasIndex("ChildProductId");
+
+                    b.HasIndex("ProductId");
+
+                    b.ToTable("product_configurations", (string)null);
+                });
+
             modelBuilder.Entity("WebApiPizzeria.Models.ProductType", b =>
                 {
                     b.Property<int>("Id")
@@ -311,6 +379,10 @@ namespace WebApiPizzeria.Migrations
                         .IsRequired()
                         .HasConstraintName("fk_order_items_order");
 
+                    b.HasOne("WebApiPizzeria.Models.OrderItem", "ParentOrderItem")
+                        .WithMany("ChildOrderItems")
+                        .HasForeignKey("ParentOrderItemId");
+
                     b.HasOne("WebApiPizzeria.Models.Product", "Product")
                         .WithMany("OrderItems")
                         .HasForeignKey("ProductId")
@@ -319,7 +391,28 @@ namespace WebApiPizzeria.Migrations
 
                     b.Navigation("Order");
 
+                    b.Navigation("ParentOrderItem");
+
                     b.Navigation("Product");
+                });
+
+            modelBuilder.Entity("WebApiPizzeria.Models.OrderItemExtras", b =>
+                {
+                    b.HasOne("WebApiPizzeria.Models.ExtraType", "ExtraType")
+                        .WithMany("OrderItemExtras")
+                        .HasForeignKey("ExtraTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("WebApiPizzeria.Models.OrderItem", "OrderItem")
+                        .WithMany("OrderItemExtras")
+                        .HasForeignKey("OrderItemId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("ExtraType");
+
+                    b.Navigation("OrderItem");
                 });
 
             modelBuilder.Entity("WebApiPizzeria.Models.Product", b =>
@@ -352,14 +445,47 @@ namespace WebApiPizzeria.Migrations
                     b.Navigation("Product");
                 });
 
+            modelBuilder.Entity("WebApiPizzeria.Models.ProductConfiguration", b =>
+                {
+                    b.HasOne("WebApiPizzeria.Models.Product", "ChildProduct")
+                        .WithMany()
+                        .HasForeignKey("ChildProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_product_configurations_child_product");
+
+                    b.HasOne("WebApiPizzeria.Models.Product", "Product")
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_product_configurations_product");
+
+                    b.Navigation("ChildProduct");
+
+                    b.Navigation("Product");
+                });
+
             modelBuilder.Entity("WebApiPizzeria.Models.DayType", b =>
                 {
                     b.Navigation("ProductAvailabilityDays");
                 });
 
+            modelBuilder.Entity("WebApiPizzeria.Models.ExtraType", b =>
+                {
+                    b.Navigation("OrderItemExtras");
+                });
+
             modelBuilder.Entity("WebApiPizzeria.Models.Order", b =>
                 {
                     b.Navigation("OrderItems");
+                });
+
+            modelBuilder.Entity("WebApiPizzeria.Models.OrderItem", b =>
+                {
+                    b.Navigation("ChildOrderItems");
+
+                    b.Navigation("OrderItemExtras");
                 });
 
             modelBuilder.Entity("WebApiPizzeria.Models.OrderStateType", b =>

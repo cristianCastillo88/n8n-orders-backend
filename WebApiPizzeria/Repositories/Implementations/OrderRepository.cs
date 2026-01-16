@@ -61,5 +61,21 @@ public class OrderRepository : IOrderRepository
             await _context.SaveChangesAsync();
         }
     }
+    public async Task<bool> ValidateOrderOwnershipAndState(int orderId, string userId)
+    {
+        var order = await _context.Orders.FirstOrDefaultAsync(o => o.Id == orderId);
+
+        if (order == null)
+            return false;
+
+        if (order.UserId != userId)
+            return false;
+
+        if (order.OrderStateTypeId.HasValue &&
+            order.OrderStateTypeId.Value != (int)OrderStateTypeEnum.Open)
+            return false;
+
+        return true;
+    }
 }
 

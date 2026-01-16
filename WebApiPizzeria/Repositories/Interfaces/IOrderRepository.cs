@@ -7,5 +7,6 @@ public interface IOrderRepository
     Task<Order?> GetLastOrderByUserId(string userId);
     Task<Order> Save(string userId);
     Task UpdateTotal(int orderId, decimal total);
+    Task<bool> ValidateOrderOwnershipAndState(int orderId, string userId);
 }
 
