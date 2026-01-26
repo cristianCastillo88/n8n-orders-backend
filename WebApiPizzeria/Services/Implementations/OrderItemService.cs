@@ -22,19 +22,23 @@ public class OrderItemService : IOrderItemService
         _context = context;
     }
 
+    private async Task<Models.Order> EnsureActiveOrderAsync(string userId)
+    {
+        var order = await _orderRepository.GetLastOrderByUserId(userId);
+        if (order == null)
+        {
+            order = await _orderRepository.Save(userId);
+        }
+        return order;
+    }
+
     public async Task<BaseResponseDto<OrderItemDto>> SaveRange(OrderItemPostDto dto, CancellationToken cancellationToken)
     {
         await using var transaction = await _context.Database.BeginTransactionAsync(cancellationToken);
         
         try
         {
-            var userIdString = dto.UserId.ToString();
-            var order = await _orderRepository.GetLastOrderByUserId(userIdString);
-
-            if (order == null)
-            {
-                order = await _orderRepository.Save(userIdString);
-            }
+            var order = await EnsureActiveOrderAsync(dto.UserId);
 
             dto.OrderId = order.Id;
             
@@ -72,7 +76,7 @@ public class OrderItemService : IOrderItemService
         {
             if (dto.OrderId == 0)
             {
-                var activeOrder = await _orderRepository.GetLastOrderByUserId(dto.UserId.ToString());
+                var activeOrder = await _orderRepository.GetLastOrderByUserId(dto.UserId);
 
                 if (activeOrder != null)
                 {
@@ -83,6 +87,18 @@ public class OrderItemService : IOrderItemService
                     return new BaseResponseDto<OrderItemDto>(true, new OrderItemDto());
                 }
             }
+            // Validar que no se eliminen todos los items (orden vacía)
+            var currentOrderItems = await _orderItemRepository.GetByOrderId(dto.OrderId);
+            var itemsToDeleteCount = currentOrderItems.Items
+                .Count(item => dto.ProductIds.Contains(item.ProductId));
+
+            //// Si se intenta eliminar todos los items, retornar error
+            //if (itemsToDeleteCount >= currentOrderItems.Items.Count && currentOrderItems.Items.Count > 0)
+            //{
+            //    await transaction.RollbackAsync(cancellationToken);
+            //    return new BaseResponseDto<OrderItemDto>(false, new OrderItemDto());
+            //}
+
             await _orderItemRepository.DeleteOrderItems(dto.OrderId, dto.ProductIds);
             var orderItemDto = await _orderItemRepository.GetByOrderId(dto.OrderId);
 

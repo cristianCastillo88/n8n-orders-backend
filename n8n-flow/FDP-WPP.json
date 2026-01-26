@@ -1,0 +1,2134 @@
+{
+  "name": "FDP-WPP",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres un agente especializado en atención al público para una pizzería que atiende clientes a través de Telegram que depende de la contextualizacion de un agente orquestador previo.\n\nmensaje contextual del orquestador: {{ $('orquetador').item.json.output.contextual_message }}\n\nTu objetivo es:\n- Saludar de manera amable y profesional.\n- Guiar al cliente en el inicio de la conversación.\n- Preguntar si desea conocer la carta o las promociones del día.\n\nINSTRUCCIONES ESTRICTAS:\n- Debes responder ÚNICAMENTE con el mensaje que será enviado al cliente.\n- NO incluyas explicaciones, aclaraciones ni texto meta.\n- NO hagas referencia a que eres un agente, asistente o sistema.\n- NO incluyas frases como “claro”, “aquí tienes”, “te dejo”, etc.\n- Usa un tono cordial, breve y natural.\n- Ten en cuenta el historial previo de la conversación si existe (no repitas saludos innecesarios).\n\nCONTENIDO OBLIGATORIO DEL MENSAJE:\n- Un saludo breve.\n- Una pregunta clara ofreciendo estas opciones:\n  - Conocer la carta.\n  - Conocer las promociones del día.\n\nFORMATO DE SALIDA:\n- Texto plano.\n- Una única respuesta. ",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -80,
+        32
+      ],
+      "id": "3e9b4bd4-d1ab-4114-8cbb-2dd9c6703daf",
+      "name": "AI Agent1"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-3.5-turbo",
+          "mode": "list",
+          "cachedResultName": "gpt-3.5-turbo"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        256
+      ],
+      "id": "9c63a74e-13b6-403c-8d69-300107c07675",
+      "name": "OpenAI Chat Model2",
+      "credentials": {
+        "openAiApi": {
+          "id": "gXWjTZOr6yCrYDCi",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"selection_id\": {\n      \"type\": \"string\",\n      \"enum\": [\n        \"SALUDAR_CLIENTE\",\n        \"ENVIAR_CARTA\",\n        \"AGREGAR_PRODUCTOS\",\n        \"OFRECER_ADICIONALES\",\n        \"CERRAR_PEDIDO\",\n        \"ELIMINAR_PRODUCTO\",\n        \"CONSULTA_GENERAL\",\n        \"INCOMPRENDIDO\"\n      ]\n    },\n    \"contextual_message\": {\n      \"type\": \"string\"\n    },\n    \"user_id\":{\n     \"type\": \"string\"\n    }\n  },\n  \"required\": [\"user_id\", \"selection_id\", \"contextual_message\"],\n  \"additionalProperties\": false\n}\n",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        -736,
+        1248
+      ],
+      "id": "f0f835b4-cf70-4f21-876b-85c8fe0892aa",
+      "name": "Structured Output Parser1",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-3.5-turbo",
+          "mode": "list",
+          "cachedResultName": "gpt-3.5-turbo"
+        },
+        "responsesApiEnabled": false,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -656,
+        1456
+      ],
+      "id": "9f55cc03-1031-4b58-b8a3-e703770caf71",
+      "name": "OpenAI Chat Model1",
+      "credentials": {
+        "openAiApi": {
+          "id": "gXWjTZOr6yCrYDCi",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres un agente orquestador para una pizzería que opera vía WhatsApp. Tu trabajo NO es responder al cliente: tu salida alimenta al siguiente agente/proceso.\n\nENTRADAS\nuser_id: {{ $json.user_id }}\nmensaje: {{ $json.chat_history_text }}\n\nOBJETIVO\n1) Analizar el último mensaje considerando el historial en base de datos.\n2) Seleccionar UNA única acción (selection_id) de la lista permitida.\n3) Escribir un contextual_message breve, operativo y útil para el siguiente agente/proceso, sin inventar datos.\n4) Si la acción es CONSULTA_GENERAL, preparar el handoff para un agente RAG.\n5) Si la acción es INCOMPRENDIDO, preparar el handoff para un agente de clarificación (que pedirá explicaciones).\n\nREGLAS ESTRICTAS\n- Devuelve EXCLUSIVAMENTE un JSON válido que cumpla el schema (Structured Output Parser).\n- NO respondas al cliente.\n- NO hagas preguntas.\n- NO inventes precios, productos, promociones, horarios, direcciones, medios de pago, condiciones de envío, ni datos de disponibilidad.\n- Selecciona SOLO una opción de selection_id.\n- NO devuelvas strings que contengan JSON.\n- NO envuelvas el resultado en arrays.\n- NO incluyas campos adicionales.\n\nACCIONES POSIBLES (selection_id)\n- SALUDAR_CLIENTE\n  Usar cuando: es el primer mensaje o saludo sin contenido operativo.\n- ENVIAR_CARTA\n  Usar cuando: el cliente pide menú/carta/productos/promos o “qué tienen” o despues de haber preguntado si quiere la carta.\n- AGREGAR_PRODUCTOS\n  Usar cuando: el cliente menciona ítems ESPECÍFICOS para sumar (productos y/o cantidades).\n  ⚠️ NO usar si: solo menciona categorías genéricas sin especificar producto concreto (ej: \"quiero agregar una promoción\", \"agregar una pizza\", \"quiero un combo\" sin decir cuál). En estos casos usar INCOMPRENDIDO.\n  ⚠️ NO usar si: menciona \"promoción\" o \"promo\" sin especificar el tipo/nombre de la promoción específica.\n  ⚠️ NO usar si: menciona \"combo\" sin especificar qué combo o sin contexto previo que lo identifique.\n  ✅ Usar si: menciona producto específico identificable (ej: \"muzzarella\", \"napolitana\", \"combo 1\", \"promo del día\" cuando ya se mostró la carta).\n- ELIMINAR_PRODUCTO\n  Usar cuando: el cliente pide quitar/eliminar un producto ESPECÍFICO del pedido.\n  ⚠️ NO usar si: solo dice \"eliminar\" o \"quitar\" sin especificar qué producto. En estos casos usar INCOMPRENDIDO.\n  ✅ Usar si: menciona producto específico a eliminar (ej: \"elimina la muzzarella\", \"quita la coca\").\n- OFRECER_ADICIONALES\n  Usar cuando: el cliente muestra intención de cerrar (ej: “listo”, “eso sería todo”, “confirmo”) y corresponde pasar al paso de upsell.\n- CERRAR_PEDIDO\n  Usar cuando: el cliente confirma el pedido y corresponde enviarlo a validación humana (cajero).\n- CONSULTA_GENERAL\n  Usar cuando: el cliente solicita información que debe responderse con una fuente de conocimiento (RAG), por ejemplo:\n  - horarios, dirección, zonas de envío, tiempos, medios de pago\n  - ingredientes, tamaños, variedades, cómo funcionan promos\n  - estado del pedido / cómo comprar / cómo cancelar\n  - cualquier pregunta que NO sea agregar/quitar/cerrar/menú\n- INCOMPRENDIDO\n  Usar cuando: el mensaje es ambiguo, incoherente, incompleto o no permite decidir con seguridad una acción anterior, por ejemplo:\n  - texto muy corto o sin intención (“ok”, “dale”, “mmm”, “👍”) sin contexto claro\n  - pedido confuso (“quiero la de siempre”, “mandame 2”, sin decir qué)\n  - menciona categorías genéricas sin especificar producto: \"quiero agregar una promoción\" (sin decir cuál), \"agregar un combo\" (sin especificar), \"quiero una pizza\" (sin tipo)\n  - menciona \"promoción\" o \"promo\" sin especificar el tipo/nombre específico de la promoción\n  - menciona \"eliminar\" o \"quitar\" sin especificar qué producto eliminar\n  - mezcla de intenciones contradictorias\n  - errores tipográficos/jerga que impiden mapear a acciones\n  - falta información esencial para ejecutar (producto/cantidad) y NO se puede inferir del historial\n  - NO se puede identificar con certeza qué producto específico agregar/eliminar\n\nCRITERIOS DE PRIORIDAD (en caso de duda)\n1) INCOMPRENDIDO si menciona intención de agregar/eliminar pero NO especifica producto concreto (ej: \"agregar promoción\" sin tipo, \"eliminar\" sin producto).\n2) ELIMINAR_PRODUCTO si explícitamente pide quitar/remover un PRODUCTO ESPECÍFICO.\n3) AGREGAR_PRODUCTOS si menciona items ESPECÍFICOS para sumar (producto identificable).\n4) ENVIAR_CARTA si pide menú/carta.\n5) CERRAR_PEDIDO si confirma pedido claramente.\n6) OFRECER_ADICIONALES si está por cerrar pero conviene upsell.\n7) CONSULTA_GENERAL si pide información para responder con RAG.\n8) SALUDAR_CLIENTE si solo saluda.\n\n⚠️ REGLA CRÍTICA: Si el mensaje menciona \"promoción\", \"promo\", \"combo\", \"pizza\" o categorías genéricas sin especificar el producto/tipo concreto, SIEMPRE usar INCOMPRENDIDO. Solo usar AGREGAR_PRODUCTOS cuando se puede identificar un producto específico del catálogo.\n\nINSTRUCCIONES PARA contextual_message\n- Debe ser un resumen operativo en 1–4 líneas.\n- Incluye: intención detectada, items mencionados (si aplica), cantidades, restricciones (“sin…”, “para retirar”, “para enviar”), y el “próximo paso” sugerido.\n- NO inventes catálogo: si no estás seguro del producto, cita la descripción tal como el cliente la escribió.\n- NO pidas datos: solo describe lo que falta si es relevante (“no indicó cantidad”, “no especificó sabor”).\n\nREGLA ESPECIAL PARA CONSULTA_GENERAL (handoff a agente RAG)\nSi selection_id = CONSULTA_GENERAL, contextual_message DEBE incluir:\n- \"Pregunta del cliente:\" <texto o paráfrasis fiel>\n- \"Contexto relevante:\" <datos del historial útiles: pedido actual, productos mencionados, canal, etc.>\n- \"Consulta sugerida para RAG:\" <keywords concretas para buscar en la base de conocimiento>\nSin agregar respuesta. Sin suposiciones. Sin preguntas.\n\nREGLA ESPECIAL PARA INCOMPRENDIDO (handoff a agente de clarificación)\nSi selection_id = INCOMPRENDIDO, contextual_message DEBE incluir:\n- \"Mensaje del cliente:\" <texto exacto>\n- \"Por qué es incomprendido:\" <1 línea, causa concreta: falta producto/cantidad/ambigüedad>\n- \"Contexto disponible:\" <resumen mínimo del historial/pedido si existe>\n- \"Qué falta para avanzar:\" <lista corta de datos faltantes, sin preguntar>\nSin inventar nada.\n\nFORMATO DE SALIDA (OBLIGATORIO)\nDevuelve SOLO este JSON (sin markdown, sin comentarios):\n\n{\n  \"user_id\": \"<string>\",\n  \"selection_id\": \"SALUDAR_CLIENTE | ENVIAR_CARTA | AGREGAR_PRODUCTOS | OFRECER_ADICIONALES | CERRAR_PEDIDO | ELIMINAR_PRODUCTO | CONSULTA_GENERAL | INCOMPRENDIDO\",\n  \"contextual_message\": \"<string>\"\n}\n",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -832,
+        1024
+      ],
+      "id": "6a41dfa3-62c1-4b33-89bd-958e6df2c873",
+      "name": "orquetador"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -864,
+        1248
+      ],
+      "id": "334c72e2-2b29-461b-9a59-3b02bf53849e",
+      "name": "OpenAI Chat Model4",
+      "credentials": {
+        "openAiApi": {
+          "id": "gXWjTZOr6yCrYDCi",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.output.selection_id }}",
+                    "rightValue": "SALUDAR_CLIENTE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "8ab70c19-ec16-456c-951d-d916456ae9eb"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Saludar Cliente"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6b8e2969-cce1-43b5-9f23-48a92b21c0e9",
+                    "leftValue": "={{ $json.output.selection_id }}",
+                    "rightValue": "ENVIAR_CARTA",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Enviar Carta"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "d28a8bbd-52e1-44b4-b5ce-90a6b921d764",
+                    "leftValue": "={{ $json.output.selection_id }}",
+                    "rightValue": "OFRECER_ADICIONALES",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Ofrecer Adicionales"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "81683d2f-6332-4e0f-be12-1587423943dc",
+                    "leftValue": "={{ $json.output.selection_id }}",
+                    "rightValue": "CERRAR_PEDIDO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Cerrar Pedido"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "81c8fd84-6bf1-46ee-809f-dd2e09629645",
+                    "leftValue": "={{ $json.output.selection_id }}",
+                    "rightValue": "AGREGAR_PRODUCTOS",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Agregar Productos"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "1ae2a3d1-c500-4228-995a-8ffa074b54c2",
+                    "leftValue": "={{ $json.output.selection_id }}",
+                    "rightValue": "ELIMINAR_PRODUCTO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Eliminar producto orden"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "6e1ed28b-a97d-43d9-b40c-64abbbd8e2b1",
+                    "leftValue": "={{ $json.output.selection_id }}",
+                    "rightValue": "CONSULTA_GENERAL",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Consulta General"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "4f910368-5e0b-47d7-b1bd-95f900498e28",
+                    "leftValue": "={{ $json.output.selection_id }}",
+                    "rightValue": "INCOMPRENDIDO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Incomprendido"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -368,
+        928
+      ],
+      "id": "2ace6ec3-b6e4-41e0-8950-ae8f6cab6d27",
+      "name": "Switch1"
+    },
+    {
+      "parameters": {
+        "url": "https://phlvcmqz-7158.brs.devtunnels.ms/api/Product/available",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Tunnel-Skip-Anti-Phishing-Page",
+              "value": "1"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -16,
+        1024
+      ],
+      "id": "dc1b7921-d9cf-4849-9852-9317aa07ee9f",
+      "name": "Get_menu"
+    },
+    {
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"product_match\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"product_id\": {\n          \"type\": \"number\"\n        }\n      },\n      \"required\": [\"product_id\"]\n    },\n    \"quantity\": {\n      \"type\": \"number\"\n    }\n  },\n  \"required\": [\"product_match\", \"quantity\"],\n  \"additionalProperties\": false\n}\n",
+        "autoFix": true
+      },
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        192,
+        1024
+      ],
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "Product Parser"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres un agente especializado en mapear texto del cliente a productos específicos del menú.\n\nTU MISIÓN:\nAnalizar el mensaje del cliente y el catálogo de productos disponibles para identificar:\n1. Qué producto(s) quiere el cliente\n2. Qué cantidad solicita\n\nCATÁLOGO DE PRODUCTOS DISPONIBLES:\n{{ JSON.stringify($json.response) }}\n\nMENSAJE DEL CLIENTE:\n{{ $('orquetador').item.json.output.contextual_message }}\n\nINSTRUCCIONES:\n- Mapea el texto del cliente al producto más probable del catálogo por ID.\n- Si menciona cantidad, úsala. Si no, asume cantidad 1.\n- Si el producto no está claro, elige el más probable o el primero si hay ambigüedad.\n- Devuelve SOLO el JSON con product_match.product_id (número) y quantity (número).\n\nEJEMPLO:\nCliente: \"Quiero 2 muzzarellas\"\nCatálogo tiene: [{id: 10, description: \"Pizza Muzzarella\", ...}]\nRespuesta: {\"product_match\": {\"product_id\": 10}, \"quantity\": 2}\n",
+        "hasOutputParser": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        416,
+        1024
+      ],
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "Product Mapper Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        384,
+        1248
+      ],
+      "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+      "name": "OpenAI Chat Model Product Mapper",
+      "credentials": {
+        "openAiApi": {
+          "id": "gXWjTZOr6yCrYDCi",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar datos para add_order_item\nconst productData = $('Product Mapper Agent').first().json.output;\nconst userId = $('orquetador').first().json.output.user_id;\n\nreturn [{\n  json: {\n    product_match: productData.product_match,\n    quantity: productData.quantity,\n    user_id: userId\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        1024
+      ],
+      "id": "d4e5f6a7-b8c9-0123-def0-123456789013",
+      "name": "Prepare Product Data"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('orquetador').item.json.output.selection_id }}",
+                    "rightValue": "AGREGAR_PRODUCTOS",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Agregar Productos"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('orquetador').item.json.output.selection_id }}",
+                    "rightValue": "ELIMINAR_PRODUCTO",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Eliminar Productos"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        640,
+        1328
+      ],
+      "id": "b1c2d3e4-f5a6-7890-bcde-f12345678902",
+      "name": "Switch Product Action"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "https://phlvcmqz-7158.brs.devtunnels.ms/api/Order/Manage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Tunnel-Skip-Anti-Phishing-Page",
+              "value": "1"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"action\": 0, \"userId\": $json.user_id || \"\", \"orderId\": 0, \"products\": [{ \"id\": Number($json.product_match?.product_id) || 0, \"quantity\": Number($json.quantity) || 1 }] } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        704,
+        1024
+      ],
+      "id": "c2ba22d6-60d2-4a6e-9a4a-545e688c1cbb",
+      "name": "add_order_item"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres el asistente virtual de una pizzería, amable y eficiente.\n\nSITUACIÓN:\nAcabas de procesar el pedido del cliente en el sistema.\nRecibes este reporte técnico de la cocina:\n{{ JSON.stringify($json) }}\n\nTU MISIÓN:\n1. CONFIRMAR: Dile al cliente que su producto fue agregado exitosamente.\n   - ⚠️ IMPORTANTE: El reporte solo muestra el ID (ej: productId: 10). NO digas \"Agregué el producto 10\".\n   - Usa tu MEMORIA de la conversación anterior para mencionar el nombre real del producto (ej: \"¡Listo! Agregué la Muzzarella\").\n   - Si por alguna razón no recuerdas el nombre exacto, di simplemente \"Agregué tu pedido\" o \"Agregué esa pizza\".\n\n2. INFORMAR TOTAL: Comunica el nuevo saldo pendiente.\n   - Usa el valor exacto de \"total\" que ves en el reporte (ej: ${{ $json.response.total }}).\n\n3. CERRAR: Pregunta brevemente si desea agregar algo más o finalizar.\n\nEJEMPLO DE RESPUESTA IDEAL:\n\"¡Perfecto! Ya agregué la Muzzarella a tu orden. El total actual es de $5800. ¿Te gustaría pedir algo más o cerramos el pedido?\"\n\nREGLAS DE ORO:\n- No menciones códigos técnicos, IDs, ni palabras como \"JSON\" o \"backend\".\n- Sé breve.\n- Tono cordial pero directo.\n- No inventes nombres de productos.\n- No inventes precios ni totales.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        928,
+        1024
+      ],
+      "id": "13b1917d-afaf-4243-a4ac-ab4a0ac6e52a",
+      "name": "AI Agent3"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        944,
+        1248
+      ],
+      "id": "497a1cc4-3abe-45c3-bdaf-f83e10c69f09",
+      "name": "OpenAI Chat Model6",
+      "credentials": {
+        "openAiApi": {
+          "id": "gXWjTZOr6yCrYDCi",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.from.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        1072,
+        1248
+      ],
+      "id": "ae86abf6-33f2-4665-b9ef-fd2f131a1a5e",
+      "name": "Postgres Chat Memory2",
+      "credentials": {
+        "postgres": {
+          "id": "YKXCSfkIjepYTYxT",
+          "name": "Postgres account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://bzlrkblroyaoaqcnctvk.supabase.co/storage/v1/object/menu/menu.png",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "supabaseApi",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        416,
+        432
+      ],
+      "id": "be9c67c8-8d35-40d3-85a9-f280a11f2e99",
+      "name": "Get_menu1",
+      "credentials": {
+        "supabaseApi": {
+          "id": "m8W0gOgNBpx6YfXj",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "https://phlvcmqz-7158.brs.devtunnels.ms/api/Order/Manage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Tunnel-Skip-Anti-Phishing-Page",
+              "value": "1"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"action\": 3, \"userId\": $('orquetador').item.json.output.user_id || \"\", \"orderId\": 0 } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -16,
+        736
+      ],
+      "id": "74dc1b02-531f-4d36-857a-474caa9b49ab",
+      "name": "get_order_for_close"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-3.5-turbo",
+          "mode": "list",
+          "cachedResultName": "gpt-3.5-turbo"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        432,
+        848
+      ],
+      "id": "28966cae-4663-4f19-9b33-61e81c3e2eb1",
+      "name": "OpenAI Chat Model",
+      "credentials": {
+        "openAiApi": {
+          "id": "gXWjTZOr6yCrYDCi",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres el cajero amable de la Pizzería.\n\nTU OBJETIVO:\nPresentar el resumen final del pedido al cliente y guiarlo al pago.\n\nDATOS DE ENTRADA (JSON):\n{{ JSON.stringify($json) }}\n\nINSTRUCCIONES:\n1. Si el JSON está vacío o no tiene items: Dile al usuario que no tiene un pedido activo y que mire la carta.\n2. Si hay items:\n   - Muestra una lista clara: \"Cant. x Producto ..... $Precio\".\n   - Muestra el TOTAL FINAL en negrita.\n   - Pregunta: \"¿Confirmas el pedido? Indícanos tu dirección de envío.\"\n\nEJEMPLO DE SALIDA:\n\"📝 *Resumen de tu pedido:*\n\n🍕 1x Muzzarella ..... $5800\n🥤 1x Coca Cola ..... $1500\n\n💰 *TOTAL: $7300*\n\n¿Todo correcto? Por favor, envíame tu dirección para el delivery. 🛵\"\n\nREGLAS:\n- Sé preciso con los números.\n- No inventes precios, nombres y totales.\n- Usar los datos que proporciona los datos de entrada: {{ JSON.stringify($json) }}\n- Usa formato Markdown (negritas *) para que se vea bien en Telegram.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        352,
+        624
+      ],
+      "id": "bbfbebd8-29e9-4781-a912-6783bb2472e3",
+      "name": "agente_close"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {}
+      },
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1984,
+        1024
+      ],
+      "id": "493610ad-edcc-4d38-808a-3007b9ca37dd",
+      "name": "WhatsApp Trigger",
+      "webhookId": "6a6c7638-f424-45d9-a7b9-cb05b2c12496",
+      "credentials": {
+        "whatsAppTriggerApi": {
+          "id": "nqb8RjA1Tm1nrIbR",
+          "name": "WhatsApp OAuth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "944778288717641",
+        "recipientPhoneNumber": "+543885061435",
+        "textBody": "={{ $json.message.content }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        704,
+        144
+      ],
+      "id": "cb72c420-cdfa-4244-9e85-99e35f5412de",
+      "name": "Send message",
+      "webhookId": "c425e845-bd8d-44c8-b703-b0483f6a6a52",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "E0pyjOjJhPQtWrfF",
+          "name": "Sender Facu"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "944778288717641",
+        "recipientPhoneNumber": "+543885061435",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        704,
+        736
+      ],
+      "id": "abb0c10c-88a9-4038-a83b-03f73b6a443f",
+      "name": "Send message2",
+      "webhookId": "c425e845-bd8d-44c8-b703-b0483f6a6a52",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "E0pyjOjJhPQtWrfF",
+          "name": "Sender Facu"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "944778288717641",
+        "recipientPhoneNumber": "+543885061435",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1280,
+        1024
+      ],
+      "id": "c03e084a-8b18-4662-b997-228e88d318f0",
+      "name": "Send message3",
+      "webhookId": "c425e845-bd8d-44c8-b703-b0483f6a6a52",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "E0pyjOjJhPQtWrfF",
+          "name": "Sender Facu"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "https://phlvcmqz-7158.brs.devtunnels.ms/api/Order/Manage",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Tunnel-Skip-Anti-Phishing-Page",
+              "value": "1"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"action\": 1, \"userId\": $json.user_id || \"\", \"orderId\": 0, \"productIds\": [Number($json.product_match?.product_id) || 0] } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -16,
+        1328
+      ],
+      "id": "e3ba8253-fbe1-4510-9a34-6d35c318f662",
+      "name": "remove_order_item1"
+    },
+    {
+      "parameters": {
+        "url": "https://phlvcmqz-7158.brs.devtunnels.ms/api/Product/available",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Tunnel-Skip-Anti-Phishing-Page",
+              "value": "1"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        -16,
+        1328
+      ],
+      "id": "f1a2b3c4-d5e6-7890-abcd-ef1234567890",
+      "name": "Get_menu_for_remove"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Preparar datos para remove_order_item1\nconst productData = $('Product Mapper Agent').first().json.output;\nconst userId = $('orquetador').first().json.output.user_id;\n\nreturn [{\n  json: {\n    product_match: productData.product_match,\n    user_id: userId\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        640,
+        1328
+      ],
+      "id": "a2b3c4d5-e6f7-8901-bcde-f12345678901",
+      "name": "Prepare Remove Product Data"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres el camarero de la pizzería.\n\nSITUACIÓN:\nAcabas de eliminar un producto del pedido a petición del cliente.\n\nTUS DATOS:\n1. \"Reporte del Sistema\": JSON con el nuevo total (debería ser más bajo).\n2. \"Lo que pidió el usuario\": El texto donde pide sacar algo (ej: \"Saca la coca\").\n\nINSTRUCCIONES:\n1. CONFIRMA: \"Listo, ya quité ese producto de tu pedido\". (Si puedes deducir el nombre por el texto del usuario, úsalo).\n2. INFORMA TOTAL: Di el nuevo total actualizado del reporte.\n3. CIERRE: Pregunta \"¿La orden está correcta ahora?\".\n\nREGLA:\n- NO inventes precios. Usa el valor '{{ $json.response.total }}' del reporte del sistema.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        352,
+        1216
+      ],
+      "id": "1194a3d4-cc01-46e0-a96c-f205078f02ed",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-4o-mini",
+          "mode": "list",
+          "cachedResultName": "gpt-4o-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        368,
+        1440
+      ],
+      "id": "566b1cc3-97f5-47c7-a936-79490f3a923b",
+      "name": "OpenAI Chat Model8",
+      "credentials": {
+        "openAiApi": {
+          "id": "gXWjTZOr6yCrYDCi",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Telegram Trigger').item.json.message.from.id }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        496,
+        1440
+      ],
+      "id": "2305c9d7-41ae-4854-a0dd-4a23f52c9b51",
+      "name": "Postgres Chat Memory4",
+      "credentials": {
+        "postgres": {
+          "id": "YKXCSfkIjepYTYxT",
+          "name": "Postgres account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Eres un agente con el rol de explicar detalles de los productos y el negocio.\nLa fuente de verdad esta en el rag asociado. debes responder en base a eso\n\n{{ $json.output.contextual_message }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -112,
+        2128
+      ],
+      "id": "65082479-8389-40dc-b92b-6e45a930cc32",
+      "name": "AI Agent2"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4.1-mini"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -144,
+        2352
+      ],
+      "id": "6fa23651-3463-4c0d-8286-52b850600f25",
+      "name": "OpenAI Chat Model3",
+      "credentials": {
+        "openAiApi": {
+          "id": "gXWjTZOr6yCrYDCi",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "formTitle": "Upload your data to test RAG",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Upload your file(s)",
+              "fieldType": "file",
+              "acceptFileTypes": ".pdf, .csv",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        -1984,
+        2656
+      ],
+      "id": "8ff4a410-9ecb-4d5e-9c4d-a0cb3078ce60",
+      "name": "Upload your file here",
+      "webhookId": "82848bc4-5ea2-4e5a-8bb6-3c09b94a8c5d"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        64,
+        2560
+      ],
+      "id": "01d75260-d51b-495c-a965-804ceef9bdb2",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": {
+          "id": "fLk9zbdLTSc5rkGJ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "### 📚 Load Data Flow",
+        "height": 460,
+        "width": 700,
+        "color": 7
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -2112,
+        2576
+      ],
+      "typeVersion": 1,
+      "id": "ee367128-2d80-4976-a90c-94688722c7fc",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.3,
+      "position": [
+        -1760,
+        2656
+      ],
+      "id": "fc14dc78-e660-4c72-920b-36d46dacedeb",
+      "name": "Postgres PGVector Store",
+      "credentials": {
+        "postgres": {
+          "id": "YKXCSfkIjepYTYxT",
+          "name": "Postgres account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        -1632,
+        2880
+      ],
+      "id": "b13c277f-07dd-4f20-b0c0-4fcff501436b",
+      "name": "Default Data Loader"
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "El documento alojado en el RAG está pensado como fuente de consulta para un agente con RAG. Incluye\nel listado de productos y tipos de producto (capturas del sistema), además de\ninformación operativa del negocio y definiciones simples de preparación de pizzas y\nadicionales.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.3,
+      "position": [
+        -16,
+        2352
+      ],
+      "id": "32390f72-96ca-4a36-9f9d-9f34efd04e19",
+      "name": "Postgres PGVector Store1",
+      "credentials": {
+        "postgres": {
+          "id": "YKXCSfkIjepYTYxT",
+          "name": "Postgres account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        -1760,
+        2880
+      ],
+      "id": "0c08d702-9a55-4988-98ab-11e311089bf4",
+      "name": "Embeddings OpenAI1",
+      "credentials": {
+        "openAiApi": {
+          "id": "fLk9zbdLTSc5rkGJ",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "944778288717641",
+        "recipientPhoneNumber": "+543885061435",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        704,
+        1328
+      ],
+      "id": "3e89f386-5433-4d88-856e-a782efee7d19",
+      "name": "Send message5",
+      "webhookId": "c425e845-bd8d-44c8-b703-b0483f6a6a52",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "E0pyjOjJhPQtWrfF",
+          "name": "Sender Facu"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "944778288717641",
+        "recipientPhoneNumber": "+543885061435",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        416,
+        2128
+      ],
+      "id": "91e6619b-442b-473e-8a19-deb7430f407a",
+      "name": "Send message4",
+      "webhookId": "a3e5b126-c4da-457e-98ca-6f41cbf35d05",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "E0pyjOjJhPQtWrfF",
+          "name": "Sender Facu"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "Eres un agente con un rol que debe intepretar el mensaje de entrada del agente orquestador.\n\nSon peticiones indefinidas que no pudo ser comprendida en su totalidad. debes repreguntar al cliente de forma amable cual fue la intecion de su pedido.\n\nDevolver un mensaje amigable sin el usuario ni ningun dato en particular.",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -80,
+        1520
+      ],
+      "id": "2c38879a-8088-4b5b-86bb-310feff64691",
+      "name": "AI Agent4"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "value": "gpt-3.5-turbo",
+          "mode": "list",
+          "cachedResultName": "gpt-3.5-turbo"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        -64,
+        1744
+      ],
+      "id": "8293a5b3-c3a5-48c8-915e-1d42801ad77b",
+      "name": "OpenAI Chat Model5",
+      "credentials": {
+        "openAiApi": {
+          "id": "gXWjTZOr6yCrYDCi",
+          "name": "OpenAi account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "942959078899828",
+        "recipientPhoneNumber": "+543885061435",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        416,
+        1616
+      ],
+      "id": "15c46056-e924-414c-90ca-c4ef035b33a4",
+      "name": "Send message6",
+      "webhookId": "a3e5b126-c4da-457e-98ca-6f41cbf35d05",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "E0pyjOjJhPQtWrfF",
+          "name": "Sender Facu"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('WhatsApp Trigger').item.json.messages[0].from }}",
+        "contextWindowLength": 1
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        64,
+        1744
+      ],
+      "id": "8cba7393-5bcc-4143-a722-a72a980e2b40",
+      "name": "Postgres Chat Memory3",
+      "credentials": {
+        "postgres": {
+          "id": "YKXCSfkIjepYTYxT",
+          "name": "Postgres account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "66fdf2db-3bae-49f3-a30a-3a62e2c8bf5b",
+              "name": "user_id",
+              "value": "={{ $json.messages[0].from }}",
+              "type": "number"
+            },
+            {
+              "id": "f6151929-d912-456a-b76e-54f8dd0055aa",
+              "name": "message",
+              "value": "={{ $json.messages[0].text.body }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -1760,
+        1024
+      ],
+      "id": "67afd5f7-f6e5-40b6-986e-1c38f444b3c9",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_chat_histories",
+          "mode": "list",
+          "cachedResultName": "n8n_chat_histories"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $json.user_id }}",
+            "message": "={\n  \"type\": \"human\",\n  \"content\": \"{{ $json.message }}\",\n  \"additional_kwargs\": {},\n  \"response_metadata\": {}\n} "
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1536,
+        1024
+      ],
+      "id": "8a12fd74-4db3-4073-9795-9702732dd7f7",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "YKXCSfkIjepYTYxT",
+          "name": "Postgres account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_chat_histories",
+          "mode": "list",
+          "cachedResultName": "n8n_chat_histories"
+        },
+        "limit": 20,
+        "where": {
+          "values": [
+            {
+              "column": "session_id",
+              "value": "={{ $json.session_id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        -1312,
+        1024
+      ],
+      "id": "d9fdf9d8-a07e-4808-afb2-a3a5441e979b",
+      "name": "Select rows from a table",
+      "credentials": {
+        "postgres": {
+          "id": "YKXCSfkIjepYTYxT",
+          "name": "Postgres account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(i => i.json);\n\nconst lines = items\n  .map(i => {\n    const role = (i.message?.type === 'human') ? 'HUMANO' : 'AI';\n    const content = (i.message?.content ?? '').toString().trim();\n    return `${role}: ${content}`;\n  })\n  .filter(Boolean);\n\nreturn [{\n  json: {\n    chat_history_text: lines.join('\\n'),\n    user_id: $input.first().json.session_id\n  }\n}];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1088,
+        1024
+      ],
+      "id": "dc622d00-7887-43e3-95f0-0b6fb410c2cf",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_chat_histories",
+          "mode": "list",
+          "cachedResultName": "n8n_chat_histories"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('orquetador').item.json.output.user_id }}",
+            "message": "={\n  \"type\": \"agent\",\n  \"content\": \"{{ $json.output }}\",\n  \"additional_kwargs\": {},\n  \"response_metadata\": {}\n} "
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        416,
+        144
+      ],
+      "id": "69ed04d9-5aae-472a-9d0a-4da3fa4f644c",
+      "name": "Insert rows in a table1",
+      "credentials": {
+        "postgres": {
+          "id": "YKXCSfkIjepYTYxT",
+          "name": "Postgres account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "944778288717641",
+        "recipientPhoneNumber": "+543885061435",
+        "textBody": "=¡Claro aqui tienes la carta!",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        -16,
+        432
+      ],
+      "id": "3b932b2e-4b0a-4dc1-a312-098118fe024d",
+      "name": "Send message7",
+      "webhookId": "c425e845-bd8d-44c8-b703-b0483f6a6a52",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "E0pyjOjJhPQtWrfF",
+          "name": "Sender Facu"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "944778288717641",
+        "recipientPhoneNumber": "+543885061435",
+        "messageType": "image",
+        "mediaPath": "useMedian8n",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        704,
+        432
+      ],
+      "id": "bb03a91e-5f24-4711-869e-b60266206c4e",
+      "name": "Send message1",
+      "webhookId": "f3a98bbf-25ce-4810-a3dc-3ea2a578610d",
+      "credentials": {
+        "whatsAppApi": {
+          "id": "E0pyjOjJhPQtWrfF",
+          "name": "Sender Facu"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "n8n_chat_histories",
+          "mode": "list",
+          "cachedResultName": "n8n_chat_histories"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "session_id": "={{ $('orquetador').item.json.output.user_id }}",
+            "message": "={\n  \"type\": \"agent\",\n  \"content\": \"¡Claro aqui tienes la carta!\",\n  \"additional_kwargs\": {},\n  \"response_metadata\": {}\n} "
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "session_id",
+              "displayName": "session_id",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "message",
+              "displayName": "message",
+              "required": true,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        992,
+        432
+      ],
+      "id": "5dd569d4-582b-47bb-9174-a2ff196127e5",
+      "name": "Insert rows in a table3",
+      "credentials": {
+        "postgres": {
+          "id": "YKXCSfkIjepYTYxT",
+          "name": "Postgres account 3"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI Agent1": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model2": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser1": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "orquetador",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Structured Output Parser1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "orquetador": {
+      "main": [
+        [
+          {
+            "node": "Switch1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model4": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "orquetador",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send message7",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [],
+        [
+          {
+            "node": "get_order_for_close",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get_menu",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get_menu_for_remove",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Agent4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_menu": {
+      "main": [
+        [
+          {
+            "node": "Product Mapper Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Product Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Product Mapper Agent",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model Product Mapper": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Product Mapper Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Product Mapper Agent": {
+      "main": [
+        [
+          {
+            "node": "Switch Product Action",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch Product Action": {
+      "main": [
+        [
+          {
+            "node": "Prepare Product Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Prepare Remove Product Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Product Data": {
+      "main": [
+        [
+          {
+            "node": "add_order_item",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "add_order_item": {
+      "main": [
+        [
+          {
+            "node": "AI Agent3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent3": {
+      "main": [
+        [
+          {
+            "node": "Send message3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model6": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent3",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory2": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent3",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_menu1": {
+      "main": [
+        [
+          {
+            "node": "Send message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "get_order_for_close": {
+      "main": [
+        [
+          {
+            "node": "agente_close",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "agente_close",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "agente_close": {
+      "main": [
+        [
+          {
+            "node": "Send message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get_menu_for_remove": {
+      "main": [
+        [
+          {
+            "node": "Product Mapper Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Remove Product Data": {
+      "main": [
+        [
+          {
+            "node": "remove_order_item1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "remove_order_item1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send message5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model8": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory4": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload your file here": {
+      "main": [
+        [
+          {
+            "node": "Postgres PGVector Store",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Postgres PGVector Store1",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Default Data Loader": {
+      "ai_document": [
+        [
+          {
+            "node": "Postgres PGVector Store",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres PGVector Store1": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent2",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings OpenAI1": {
+      "ai_embedding": [
+        [
+          {
+            "node": "Postgres PGVector Store",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent2": {
+      "main": [
+        [
+          {
+            "node": "Send message4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat Model5": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent4",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent4": {
+      "main": [
+        [
+          {
+            "node": "Send message6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory3": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent4",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table": {
+      "main": [
+        [
+          {
+            "node": "Select rows from a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select rows from a table": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "orquetador",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Insert rows in a table1": {
+      "main": [
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message7": {
+      "main": [
+        [
+          {
+            "node": "Get_menu1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message1": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "availableInMCP": false
+  },
+  "versionId": "3d34815a-9811-4dce-8ee4-1f153cfdd94c",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4dd65841647e0fde54522c49cd1da5beadc5740ebd4d673cc1ed2cccdf31915f"
+  },
+  "id": "46rDUKmycU3YDoDO",
+  "tags": []
+}

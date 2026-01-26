@@ -21,6 +21,7 @@ builder.Services.AddScoped<IOrderItemRepository, OrderItemRepository>();
 // Registrar Servicios
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IOrderItemService, OrderItemService>();
+builder.Services.AddScoped<IOrderService, OrderService>();
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
